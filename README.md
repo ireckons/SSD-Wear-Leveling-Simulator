@@ -45,7 +45,7 @@ This simulator models three wear-leveling strategies on a 10×10 grid of flash b
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/SSD-Wear-Leveling-Simulator.git
+git clone https://github.com/ireckons/SSD-Wear-Leveling-Simulator.git
 cd SSD-Wear-Leveling-Simulator
 
 # Install dependencies
