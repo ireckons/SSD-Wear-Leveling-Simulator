@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSD Wear-Leveling Simulator and Storage Evolution Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="hero">
+    <div>
+      <h1>SSD Wear-Leveling Simulator and Storage Evolution Visualizer</h1>
+      <p class="subtitle">
+        Interactive lab for understanding NAND wear, block management, and why modern SSD controllers outperform older storage systems.
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <span>Virtual Blocks</span>
+        <strong id="heroBlockCount">100</strong>
+      </div>
+      <div>
+        <span>Endurance</span>
+        <strong id="heroEndurance">1000</strong>
+      </div>
+      <div>
+        <span>Mode</span>
+        <strong id="heroMode">No Wear Leveling</strong>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Main Sections">
+    <button class="tab-btn active" data-tab="simulator">Simulator Lab</button>
+    <button class="tab-btn" data-tab="theory">Theory and SSD Architecture</button>
+    <button class="tab-btn" data-tab="evolution">Modern SSD vs Older Storage Methods</button>
+  </nav>
+
+  <main>
+    <section id="simulator" class="tab-panel active">
+      <div class="controls-panel card">
+        <h2>Simulation Controls</h2>
+        <div class="controls-grid">
+          <label>
+            Algorithm
+            <select id="algorithmSelect">
+              <option value="none">No Wear Leveling</option>
+              <option value="dynamic">Dynamic Wear Leveling</option>
+              <option value="static">Static Wear Leveling</option>
+            </select>
+          </label>
+
+          <label>
+            Workload Type
+            <select id="workloadMode">
+              <option value="random">Random Writes</option>
+              <option value="sequential">Sequential Writes</option>
+              <option value="hotspot">Hotspot Writes</option>
+            </select>
+          </label>
+
+          <label>
+            Speed (writes per second)
+            <input id="speedSlider" type="range" min="1" max="60" value="10" />
+            <span id="speedValue">10</span>
+          </label>
+
+          <label>
+            Endurance Limit (cycles)
+            <input id="enduranceSlider" type="range" min="200" max="5000" step="50" value="1000" />
+            <span id="enduranceValue">1000</span>
+          </label>
+
+          <label>
+            Number of Blocks
+            <input id="blocksSlider" type="range" min="100" max="400" step="10" value="100" />
+            <span id="blocksValue">100</span>
+          </label>
+
+          <label>
+            Static Data Move Interval
+            <input id="staticMoveInterval" type="range" min="20" max="500" step="10" value="120" />
+            <span id="staticMoveIntervalValue">120</span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button id="startBtn" class="primary">Start</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="resetBtn">Reset</button>
+          <button id="randomizeBtn">Randomize Workload</button>
+          <button id="exportBtn">Export Results</button>
+        </div>
+      </div>
+
+      <div class="card advanced-card">
+        <h3>Advanced SSD Features</h3>
+        <div class="toggle-grid">
+          <label><input type="checkbox" id="toggleOverProvision" checked /> Over-Provisioning Reserve Blocks</label>
+          <label><input type="checkbox" id="toggleGC" checked /> Garbage Collection</label>
+          <label><input type="checkbox" id="toggleTRIM" checked /> TRIM Behavior</label>
+          <label><input type="checkbox" id="toggleBadBlock" checked /> Bad Block Replacement</label>
+          <label><input type="checkbox" id="toggleFTL" checked /> Flash Translation Layer Mapping</label>
+          <label><input type="checkbox" id="toggleResearch" /> Research Mode (Extra Tuning)</label>
+        </div>
+
+        <div id="researchPanel" class="research-panel hidden">
+          <label>
+            Reserve Ratio (%)
+            <input id="reserveRatio" type="range" min="0" max="30" value="7" />
+            <span id="reserveRatioValue">7</span>
+          </label>
+          <label>
+            Hotset Size (%)
+            <input id="hotsetRatio" type="range" min="2" max="50" value="12" />
+            <span id="hotsetRatioValue">12</span>
+          </label>
+          <label>
+            GC Aggressiveness
+            <input id="gcThreshold" type="range" min="10" max="90" value="55" />
+            <span id="gcThresholdValue">55</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <article class="metric card"><h3>Total Writes</h3><p id="totalWrites">0</p></article>
+        <article class="metric card"><h3>Average Wear</h3><p id="avgWear">0%</p></article>
+        <article class="metric card"><h3>Maximum Wear</h3><p id="maxWear">0%</p></article>
+        <article class="metric card"><h3>Wear Variance</h3><p id="wearVariance">0</p></article>
+        <article class="metric card"><h3>Failed Blocks</h3><p id="failedBlocks">0</p></article>
+        <article class="metric card"><h3>Estimated Lifespan</h3><p id="lifespanEstimate">N/A</p></article>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2>Live Block Grid</h2>
+          <div class="block-legend" aria-label="Block color legend">
+            <span class="legend-item"><i class="legend-swatch healthy"></i> Healthy</span>
+            <span class="legend-item"><i class="legend-swatch moderate"></i> Moderate</span>
+            <span class="legend-item"><i class="legend-swatch high"></i> High</span>
+            <span class="legend-item"><i class="legend-swatch near-failure"></i> Near Failure</span>
+            <span class="legend-item"><i class="legend-swatch failed"></i> Failed</span>
+          </div>
+        </div>
+        <div id="blockGrid" class="block-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2>Side-by-Side Comparison Mode</h2>
+          <p>Observe early failures in no wear leveling against a smarter algorithm in real time.</p>
+        </div>
+        <div class="comparison-controls">
+          <label><input id="comparisonToggle" type="checkbox" /> Enable Comparison</label>
+          <label>
+            Compare With
+            <select id="comparisonAlgorithm">
+              <option value="dynamic">Dynamic Wear Leveling</option>
+              <option value="static">Static Wear Leveling</option>
+            </select>
+          </label>
+        </div>
+        <div id="comparisonWrap" class="comparison-wrap hidden">
+          <div class="comparison-col">
+            <h3>No Wear Leveling</h3>
+            <div id="compareGridNone" class="block-grid small"></div>
+            <p class="mini-stats" id="compareStatsNone">Writes: 0 | Failed: 0</p>
+          </div>
+          <div class="comparison-col">
+            <h3 id="compareLabelRight">Dynamic Wear Leveling</h3>
+            <div id="compareGridSmart" class="block-grid small"></div>
+            <p class="mini-stats" id="compareStatsSmart">Writes: 0 | Failed: 0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <article class="card chart-card">
+          <h3>Wear Distribution</h3>
+          <canvas id="wearDistributionChart"></canvas>
+        </article>
+        <article class="card chart-card">
+          <h3>Block Health Histogram</h3>
+          <canvas id="healthHistogramChart"></canvas>
+        </article>
+        <article class="card chart-card">
+          <h3>Lifespan Comparison</h3>
+          <canvas id="lifespanComparisonChart"></canvas>
+        </article>
+        <article class="card chart-card">
+          <h3>Algorithm Performance</h3>
+          <canvas id="performanceChart"></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section id="theory" class="tab-panel">
+      <article class="card theory-card">
+        <h2>What is SSD Wear Leveling?</h2>
+        <p>
+          Wear leveling is a flash memory management strategy that distributes write and erase operations across NAND blocks.
+          Since each block can survive only a finite number of program/erase cycles, balancing wear directly improves reliability.
+        </p>
+        <h3>Why NAND Flash Wears Out</h3>
+        <ul>
+          <li>Each erase cycle slowly damages the floating-gate or charge-trap structure.</li>
+          <li>Repeated stress increases bit errors and retention loss.</li>
+          <li>When error rates exceed correction capability, the block is marked bad.</li>
+        </ul>
+
+        <h3>Algorithm Differences</h3>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Approach</th>
+              <th>How It Works</th>
+              <th>Wear Pattern</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>No Wear Leveling</td>
+              <td>Frequently writes to same logical hotspots.</td>
+              <td>Highly uneven</td>
+              <td>Early local failure</td>
+            </tr>
+            <tr>
+              <td>Dynamic Wear Leveling</td>
+              <td>Writes new data to least-used available blocks.</td>
+              <td>More even for active data</td>
+              <td>Longer life than none</td>
+            </tr>
+            <tr>
+              <td>Static Wear Leveling</td>
+              <td>Moves static data periodically so cold blocks also rotate.</td>
+              <td>Most balanced overall</td>
+              <td>Best endurance</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>SSD Architecture Overview</h3>
+        <div class="architecture-grid">
+          <div>
+            <h4>NAND Cells</h4>
+            <p>Physical transistors storing charge; grouped into pages and blocks.</p>
+          </div>
+          <div>
+            <h4>Pages and Blocks</h4>
+            <p>Writes happen at page granularity, erases happen at block granularity.</p>
+          </div>
+          <div>
+            <h4>Controller</h4>
+            <p>Runs firmware for wear leveling, error correction, caching, and bad-block management.</p>
+          </div>
+          <div>
+            <h4>Flash Translation Layer (FTL)</h4>
+            <p>Maps logical addresses from host to physical NAND locations dynamically.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="evolution" class="tab-panel">
+      <article class="card theory-card">
+        <h2>Modern SSD vs Older Storage Methods</h2>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Technology</th>
+                <th>Mechanism</th>
+                <th>Latency</th>
+                <th>Reliability Strategy</th>
+                <th>Random Access</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Traditional HDD</td>
+                <td>Spinning platters + moving head</td>
+                <td>High seek latency</td>
+                <td>Mechanical tolerance and sector remap</td>
+                <td>Slow</td>
+              </tr>
+              <tr>
+                <td>Basic/Older Flash</td>
+                <td>Raw flash with minimal controller logic</td>
+                <td>Lower than HDD</td>
+                <td>Limited or no advanced wear leveling</td>
+                <td>Moderate</td>
+              </tr>
+              <tr>
+                <td>Modern SSD</td>
+                <td>Parallel NAND + advanced controller</td>
+                <td>Very low</td>
+                <td>Dynamic/static wear leveling, GC, TRIM, OP, ECC</td>
+                <td>Fast</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Storage Evolution Timeline</h3>
+        <div class="timeline">
+          <div class="event">
+            <span>1980s-2000s</span>
+            <h4>HDD Dominance</h4>
+            <p>Mechanical storage offered large capacity but faced seek-time bottlenecks.</p>
+          </div>
+          <div class="event">
+            <span>Early Flash Era</span>
+            <h4>Raw/Basic Flash Systems</h4>
+            <p>Faster access than disks, but uneven wear caused reliability concerns.</p>
+          </div>
+          <div class="event">
+            <span>Modern Era</span>
+            <h4>Controller-Driven SSDs</h4>
+            <p>FTL + wear leveling + maintenance algorithms solved major flash endurance issues.</p>
+          </div>
+        </div>
+
+        <h3>How Modern SSDs Solved Older Flash Problems</h3>
+        <ul>
+          <li>Mapped logical writes to fresh physical blocks using FTL.</li>
+          <li>Used wear-leveling to avoid hotspot failures.</li>
+          <li>Added over-provisioning and bad-block replacement for resilience.</li>
+          <li>Applied garbage collection and TRIM to maintain sustained performance.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
