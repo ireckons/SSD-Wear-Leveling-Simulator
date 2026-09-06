@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KeyVault — Access Key Admin Panel</title>
+    <meta name="description" content="Manage access keys, subscriptions, and user permissions with KeyVault admin dashboard.">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KeyVault">
+    <meta name="application-name" content="KeyVault">
+    <meta name="msapplication-TileColor" content="#7c3aed">
+    <meta name="msapplication-TileImage" content="icons/icon-144.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ═══════ AUTH SCREEN ═══════ -->
+<div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+        <div class="logo">
+            <div class="logo-icon"><img src="icons/icon-192.png" alt="KeyVault" style="width: 40px; height: 40px; border-radius: 8px;"></div>
+            <h1>KeyVault</h1>
+            <p class="subtitle">Access Key Management System</p>
+        </div>
+        <form id="loginForm" autocomplete="off">
+            <div class="form-group mb-2">
+                <label class="form-label">Email</label>
+                <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com" required>
+            </div>
+            <div class="form-group mb-2">
+                <label class="form-label">Password</label>
+                <input type="password" id="adminPassword" class="form-input" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-full" id="loginBtn">
+                <span>Sign In to Dashboard</span>
+            </button>
+            <p class="text-center mt-2 text-muted" style="font-size: 0.8rem;">
+                Protected admin access only
+            </p>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ APP CONTAINER ═══════ -->
+<div id="appContainer" class="app-container">
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">🔑</div>
+            <div class="header-title">
+                KeyVault <span>Admin Panel</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="header-time" id="headerTime"></span>
+            <button class="btn btn-secondary btn-sm" id="logoutBtn" title="Logout">
+                ⏻ Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Stats Grid -->
+        <section class="stats-grid">
+            <div class="stat-card animate-in">
+                <div class="stat-icon">🔑</div>
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Total Keys</div>
+            </div>
+            <div class="stat-card animate-in">
+                <div class="stat-icon">✓</div>
+                <div class="stat-value" id="statActive">0</div>
+                <div class="stat-label">Active</div>
+            </div>
+            <div class="stat-card animate-in">
+                <div class="stat-icon">✗</div>
+                <div class="stat-value" id="statExpired">0</div>
+                <div class="stat-label">Expired</div>
+            </div>
+            <div class="stat-card animate-in">
+                <div class="stat-icon">⊘</div>
+                <div class="stat-value" id="statRevoked">0</div>
+                <div class="stat-label">Revoked</div>
+            </div>
+        </section>
+
+        <!-- Key Generator Panel -->
+        <section class="panel animate-in">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="icon">⚡</span> Generate New Access Key
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="key-generator">
+                    <div class="key-gen-left">
+                        <div class="key-display" id="keyDisplay">
+                            <span class="key-placeholder">Click "Generate Key" to create a new access key</span>
+                        </div>
+                        <div class="key-actions">
+                            <button class="btn btn-primary" id="generateKeyBtn">
+                                ⚡ Generate Key
+                            </button>
+                            <button class="btn btn-secondary copy-feedback" id="copyKeyBtn" disabled>
+                                📋 Copy Key
+                            </button>
+                        </div>
+                    </div>
+                    <div class="key-gen-right">
+                        <div class="form-group">
+                            <label class="form-label">User Name</label>
+                            <input type="text" id="userName" class="form-input" placeholder="Enter user's full name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subscription Duration</label>
+                            <select id="keyDuration" class="form-select">
+                                <option value="1">1 Day</option>
+                                <option value="2">2 Days</option>
+                                <option value="7" selected>7 Days</option>
+                                <option value="15">15 Days</option>
+                                <option value="30">30 Days</option>
+                                <option value="90">90 Days</option>
+                                <option value="180">180 Days</option>
+                                <option value="365">1 Year</option>
+                                <option value="custom">Custom...</option>
+                            </select>
+                        </div>
+                        <div class="form-group hidden" id="customDurationGroup">
+                            <label class="form-label">Custom Duration (Days)</label>
+                            <input type="number" id="customDuration" class="form-input" placeholder="Enter number of days" min="1" max="3650">
+                        </div>
+                        <button class="btn btn-success btn-lg btn-full" id="saveKeyBtn" disabled>
+                            ✓ Save & Assign Key
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Table Panel -->
+        <section class="panel animate-in">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="icon">👥</span> Managed Users & Keys
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm" id="refreshBtn">↻ Refresh</button>
+                    <button class="btn btn-primary btn-sm" id="exportBtn">↓ Export CSV</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Search by name or key...">
+                    </div>
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="active">Active</button>
+                        <button class="filter-btn" data-filter="expired">Expired</button>
+                        <button class="filter-btn" data-filter="revoked">Revoked</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>User Name</th>
+                                <th>Access Key</th>
+                                <th>Duration</th>
+                                <th>Created</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keysTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-state hidden" id="emptyState">
+                    <div class="empty-icon">🔑</div>
+                    <h3>No access keys yet</h3>
+                    <p>Generate your first access key using the form above.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- ═══════ EXTEND MODAL ═══════ -->
+<div class="modal-overlay" id="extendModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>🕐 Extend Subscription</h3>
+            <button class="btn btn-icon btn-secondary" id="closeExtendModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted mb-2" style="font-size: 0.9rem;">
+                Extending key for: <strong id="extendUserName"></strong>
+            </p>
+            <div class="form-group">
+                <label class="form-label">Extend By (Days)</label>
+                <select id="extendDuration" class="form-select">
+                    <option value="1">1 Day</option>
+                    <option value="2">2 Days</option>
+                    <option value="7" selected>7 Days</option>
+                    <option value="15">15 Days</option>
+                    <option value="30">30 Days</option>
+                    <option value="90">90 Days</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelExtend">Cancel</button>
+            <button class="btn btn-primary" id="confirmExtend">Extend Subscription</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ RENEW MODAL ═══════ -->
+<div class="modal-overlay" id="renewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>🔄 Renew Subscription</h3>
+            <button class="btn btn-icon btn-secondary" id="closeRenewModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted mb-2" style="font-size: 0.9rem;">
+                Renewing key for: <strong id="renewUserName"></strong>
+            </p>
+            <div class="form-group">
+                <label class="form-label">New Duration</label>
+                <select id="renewDuration" class="form-select">
+                    <option value="2">2 Days</option>
+                    <option value="7" selected>7 Days</option>
+                    <option value="15">15 Days</option>
+                    <option value="30">30 Days</option>
+                    <option value="90">90 Days</option>
+                    <option value="365">1 Year</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelRenew">Cancel</button>
+            <button class="btn btn-success" id="confirmRenew">Renew Key</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ TOAST CONTAINER ═══════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════ SCRIPTS ═══════ -->
+<script type="module" src="js/app.js"></script>
+
+<!-- ═══════ PWA SERVICE WORKER ═══════ -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.log('SW registration failed:', err));
+        });
+    }
+</script>
+
+</body>
+</html>
